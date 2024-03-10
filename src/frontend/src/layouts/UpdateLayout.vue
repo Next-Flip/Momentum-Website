@@ -40,7 +40,7 @@
           <p>
             Your browser doesn't support WebSerial API.
             For better experience we recommend using Chrome for desktop.<br />
-            <a style="color: #d33" href="https://caniuse.com/web-serial">Full list of supported browsers</a>
+            <a style="color: #a883e9" href="https://caniuse.com/web-serial">Full list of supported browsers</a>
           </p>
         </div>
       </q-page>

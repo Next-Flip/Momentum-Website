@@ -5,17 +5,23 @@
     .nav-menu #nav .nav-link {
         padding: 35px 7.5px;
     }
+    .nav-menu #nav .nav-link.install-button {
+        padding: 27px 7.5px;
+    }
+    header.sticky .nav-menu #nav .nav-link.install-button {
+        padding: 15px 15px;
+    }
     .install-button > a {
         color: #fff;
         height: 40px;
-        min-width: 152px;
+        min-width: 120px;
         line-height: 36px;
         font-size: 14px;
     }
     .home-thumb {
-        height: 40%;
-        top: 30%;
-        right: 50px;
+        height: 35%;
+        top: 50%;
+        right: -20px;
         left: unset;
     }
     header.sticky .nav-menu #nav .nav-link {
@@ -29,22 +35,36 @@
     }
     .nav-menu .navbar-logo {
         font-size: 48px;
+        height: 80px;
     }
-    header.sticky {
+    header.sticky .nav-menu .navbar-logo {
+        height: 35px;
+    }
+    header.sticky, .navbar {
         height: 50px;
     }
+    .navbar-collapse.show, .navbar-collapse.collapsing {
+        position: absolute;
+        right: 0px;
+        top: 80px;
+        text-align: right !important;
+    }
+    header.sticky .navbar-collapse.show, header.sticky .navbar-collapse.collapsing {
+        top: 50px;
+    }
     header .nav-menu #nav .nav-link,
-    header.sticky .nav-menu #nav .nav-link {
+    header .nav-menu #nav .nav-link.install-button,
+    header.sticky .nav-menu #nav .nav-link,
+    header.sticky .nav-menu #nav .nav-link.install-button {
         padding: 7.5px 15px;
     }
     #navbar {
-        padding: 30px;
+        padding: 15px;
         border-radius: 3px;
         background-color: #0b0b0b;
         text-align: left;
     }
     .install-button {
-        margin-top: 30px;
         text-align: left;
     }
     .home-heading > h2 {
@@ -52,8 +72,7 @@
     }
     .home-thumb {
         height: 35%;
-        top: 35%;
-        right: -60px;
+        top: 60%;
     }
     .home-heading {
         margin-bottom: 70px;
@@ -83,7 +102,7 @@
         display: inline-block;
         border: 2px solid #a883e9;
         height: 40px;
-        min-width: 160px;
+        min-width: 130px;
         line-height: 36px;
         font-size: 14px;
     }
@@ -96,11 +115,22 @@
     .nav-menu .navbar-logo {
         font-size: 48px;
     }
-    header.sticky {
+    header.sticky, .navbar {
         height: 50px;
     }
+    .navbar-collapse.show, .navbar-collapse.collapsing {
+        position: absolute;
+        right: 0px;
+        top: 90px;
+        text-align: right !important;
+    }
+    header.sticky .navbar-collapse.show, header.sticky .navbar-collapse.collapsing {
+        top: 50px;
+    }
     header .nav-menu #nav .nav-link,
-    header.sticky .nav-menu #nav .nav-link {
+    header .nav-menu #nav .nav-link.install-button,
+    header.sticky .nav-menu #nav .nav-link,
+    header.sticky .nav-menu #nav .nav-link.install-button {
         padding: 5px 15px;
     }
     #navbar {
@@ -110,7 +140,6 @@
         text-align: left;
     }
     .install-button {
-        margin-top: 30px;
         text-align: left;
     }
     header {
@@ -126,9 +155,9 @@
         padding-top: 50px;
     }
     .home-thumb {
-        height: 35%;
-        right: 0;
-        top: 50%;
+        height: 30%;
+        right: -10px;
+        top: 57%;
         left: unset;
     }
     .logo-area > a > h2 {
@@ -179,25 +208,16 @@
 
 @media (min-width: 480px) and (max-width: 767px) {
     .home-heading > h3 {
-        font-size: 284px;
+        font-size: 250px;
+        left: -100px;
     }
     .home-heading > h2 {
         font-size: 70px;
     }
     .home-thumb {
-        /* width: 75%; */
         left: unset;
     }
     .home-heading {
         margin-bottom: 50px;
-    }
-    .home-heading > h3 {
-        top: -139px;
-    }
-}
-
-@media (min-width: 576px) and (max-width: 767px) {
-    .home-heading > h3 {
-        font-size: 286px;
     }
 }

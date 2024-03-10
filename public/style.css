@@ -167,7 +167,7 @@ ol {
     font-size: 24px;
     right: 30px;
     width: 50px;
-    background-color: #fb393d;
+    background-color: #a883e9;
     color: #fff;
     text-align: center;
     height: 50px;
@@ -215,7 +215,7 @@ p {
 .line-shape {
     width: 80px;
     height: 2px;
-    background-color: #d33;
+    background-color: #a883e9;
     margin-top: 15px;
 }
 
@@ -286,6 +286,8 @@ header {
     margin: 0;
     line-height: 1;
     padding: 0;
+    content:url("/logo.png");
+    height: 100px;
 }
 
 
@@ -312,9 +314,13 @@ header {
     padding: 35px 15px;
 }
 
+.nav-menu #nav .nav-link.install-button {
+    padding: 22px 15px;
+}
+
 
 .nav-menu nav ul li>a:hover {
-    color: #fb397d;
+    color: #a883e9;
 }
 
 .install-button {
@@ -325,16 +331,16 @@ header {
     color: #fff;
     font-weight: 500;
     display: inline-block;
-    border: 2px solid #f00;
+    border: 2px solid #a883e9;
     height: 50px;
-    min-width: 178px;
+    min-width: 140px;
     line-height: 46px;
     text-align: center;
-    border-radius: 24px 24px 24px 0px;
+    border-radius: 24px;
 }
 
 .install-button>a:hover {
-    background: #ff4444;
+    background: #a883e9;
     color: #fff;
     border-color: transparent;
     -webkit-transition-duration: 500ms;
@@ -354,12 +360,22 @@ header.sticky {
     z-index: 99;
 }
 
+.navbar-collapse {
+    align-self: flex-start;
+}
+
 header.sticky .nav-menu .navbar-logo {
     font-size: 50px;
+    content:url("/logo-collapsed.png");
+    height: 40px;
 }
 
 header.sticky .nav-menu #nav .nav-link {
     padding: 23px 15px;
+}
+
+header.sticky .nav-menu #nav .nav-link.install-button {
+    padding: 10px 15px;
 }
 
 header.sticky .navbar {
@@ -372,7 +388,7 @@ header.sticky .navbar {
 -------------------------- */
 
 section#home {
-    background-image: url(img/xtreme_custom-firmware-background.png);
+    background-image: url(img/hero-background.png);
     height: 700px;
     position: relative;
     z-index: 1;
@@ -388,7 +404,7 @@ section#home>.container {
 .home-thumb {
     height: 50%;
     position: absolute;
-    top: 26%;
+    top: 35%;
     left: 50%;
     z-index: 9;
 }
@@ -420,11 +436,11 @@ section#home>.container {
 }
 
 .home-heading>h3 {
-    font-size: 332px;
+    font-size: 269px;
     position: absolute;
     top: -134px;
     font-weight: 900;
-    left: -12px;
+    left: -56px;
     z-index: -1;
     color: #fff;
     opacity: .1;
@@ -452,14 +468,14 @@ section#home>.container {
 
 .single-special>h4 {
     font-size: 22px;
-    color: #d33;
+    color: #a883e9;
     margin-bottom: 15px;
 }
 
 .single-special {
     border: 1px solid #eff2f6;
     padding: 40px;
-    border-radius: 40px 40px 40px 0px;
+    border-radius: 30px;
     -webkit-transition-duration: 800ms;
     -o-transition-duration: 800ms;
     transition-duration: 800ms;
@@ -488,7 +504,7 @@ section#home>.container {
 }
 
 .single-feature>i {
-    color: #d33;
+    color: #a883e9;
     font-size: 30px;
     display: inline-block;
     float: left;
@@ -510,7 +526,7 @@ section#home>.container {
 -------------------------- */
 
 section#discord {
-    background: linear-gradient(to left, #ec2f78, #fd523b);
+    background: linear-gradient(to left, #a95cf1, #6d61dd);
 }
 
 .discord-description>h2 {
@@ -530,9 +546,9 @@ section#discord {
     display: inline-block;
     text-align: center;
     line-height: 45px;
-    color: #fb397d;
+    color: #7850bd;
     font-weight: 500;
-    border-radius: 23px 23px 23px 0;
+    border-radius: 23px;
 }
 
 .discord-button>a:hover {
@@ -552,7 +568,7 @@ section#discord {
 -------------------------- */
 
 .table-responsive {
-    border-radius: 22px 25px 22px 0;
+    border-radius: 22px;
     color: #fff;
     border: 2px solid #bbb;
 }
@@ -589,19 +605,20 @@ section#discord {
 }
 
 .table i {
-    font-size: 24px;
+    font-size: 28px;
 }
 
 .table .ion-help-circled {
-	color: orange;
+	color: #b3b3b3;
 }
 
 .table .ion-close-circled {
-    color: red;
+    color: #ca8300;
 }
 
 .table .ion-checkmark-circled {
-    color: greenyellow;
+    color: #9d4aeb;
+    background: radial-gradient(white 40%, transparent 40%);
 }
 
 
@@ -624,7 +641,7 @@ section#discord {
     position: relative;
     overflow: hidden;
     background: #444;
-    border-radius: 24px 24px 24px 0px;
+    border-radius: 24px;
     border: 2px solid white;
 }
 

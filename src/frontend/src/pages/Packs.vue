@@ -40,7 +40,7 @@
             <q-btn
               v-else
               class="main-btn"
-              :style="`flex: 1; background-image: linear-gradient(to right, #d33 ${progress * 100}%, transparent ${progress * 100}%);`"
+              :style="`flex: 1; background-image: linear-gradient(to right, #a883e9 ${progress * 100}%, transparent ${progress * 100}%);`"
               disable
               flat
             >Installing</q-btn>
@@ -265,7 +265,7 @@ export default defineComponent({
     this.packs = await fetchPacks()
       .catch(error => {
         this.$emit('showNotif', {
-          message: 'Unable to load asset packs from the cloud server. Reload the page and try again.',
+          message: 'Unable to load asset packs from the server. Reload the page and try again.',
           color: 'negative',
           reloadBtn: true
         })

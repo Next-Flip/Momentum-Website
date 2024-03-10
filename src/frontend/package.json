@@ -1,9 +1,9 @@
 {
-  "name": "flipper-xtre.me",
+  "name": "momentum-fw.dev",
   "version": "1.0",
-  "description": "Web-updater and asset pack downloader for flipper-xtre.me",
-  "productName": "flipper-xtre.me",
-  "author": "ClaraCrazy | WillyJL",
+  "description": "Web-updater and asset pack downloader for momentum-fw.dev",
+  "productName": "momentum-fw.dev",
+  "author": "Next-Flip",
   "private": true,
   "scripts": {
     "lint": "eslint --ext .js,.vue ./",

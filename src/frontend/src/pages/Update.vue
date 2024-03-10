@@ -1,7 +1,7 @@
 <template>
   <q-page class="flex-center column full-width">
     <div class="flex-center column align-items-center">
-      <div v-show="flags.updateInProgress || (connected && info !== null && this.info.storage_databases_present && flags.rpcActive && info.hardware_name)" class="device-screen column">
+      <div v-show="flags.updateInProgress || (connected && info !== null && this.info.storage_databases_present && flags.rpcActive && info.hardware_name)" class="device-screen flex-center column">
         <div class="flex">
           <div class="info">
             <p>

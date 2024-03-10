@@ -2,11 +2,6 @@ import { untar } from '../untar/untar.js'
 import pako from 'pako'
 import { unzipSync } from 'fflate'
 
-const cloud = 'https://cloud.cynthialabs.net'
-const webdav = '/public.php/webdav/'
-const updaterShare = 'fWQpJpwgKFeHxwd'
-const packsShare = 'Qb8Dto32sw8yP8X'
-
 class Operation {
   // eslint-disable-next-line
   constructor() {
@@ -32,33 +27,34 @@ class Operation {
 }
 
 async function fetchPacks () {
-  const response = await fetch(`${cloud}${webdav}`, {
-    method: 'PROPFIND',
-    headers: {
-      Authorization: `Basic ${btoa(packsShare + ':')}`
-    }
-  })
-  if (response.status >= 400) {
-    throw new Error('Failed to fetch asset packs (' + response.status + ')')
-  }
-  const data = await response.text()
+  return []
+  // const response = await fetch(`${cloud}${webdav}`, {
+  //   method: 'PROPFIND',
+  //   headers: {
+  //     Authorization: `Basic ${btoa(packsShare + ':')}`
+  //   }
+  // })
+  // if (response.status >= 400) {
+  //   throw new Error('Failed to fetch asset packs (' + response.status + ')')
+  // }
+  // const data = await response.text()
 
-  const res = (new DOMParser()).parseFromString(data, 'text/xml')
-  const packs = []
-  for (const file of res.getElementsByTagName('d:response')) {
-    const path = file.getElementsByTagName('d:href')[0].textContent.trim()
-    if (!(path.startsWith(webdav) && path.endsWith('.zip'))) continue
-    const [name, author] = decodeURI(path.slice(webdav.length, -'.zip'.length)).split('.')
-    const url = `${cloud}/s/${packsShare}/download?path=/&files=${name}.${author}`
-    packs.push({
-      name: name,
-      author: author,
-      description: '',
-      image: url + '.png',
-      download: url + '.zip'
-    })
-  }
-  return packs
+  // const res = (new DOMParser()).parseFromString(data, 'text/xml')
+  // const packs = []
+  // for (const file of res.getElementsByTagName('d:response')) {
+  //   const path = file.getElementsByTagName('d:href')[0].textContent.trim()
+  //   if (!(path.startsWith(webdav) && path.endsWith('.zip'))) continue
+  //   const [name, author] = decodeURI(path.slice(webdav.length, -'.zip'.length)).split('.')
+  //   const url = `${cloud}/s/${packsShare}/download?path=/&files=${name}.${author}`
+  //   packs.push({
+  //     name: name,
+  //     author: author,
+  //     description: '',
+  //     image: url + '.png',
+  //     download: url + '.zip'
+  //   })
+  // }
+  // return packs
 }
 
 async function fetchPack (url) {
@@ -74,41 +70,61 @@ async function fetchPack (url) {
   return buffer
 }
 
-async function fetchVersions (target) {
-  const response = await fetch(`${cloud}${webdav}`, {
-    method: 'PROPFIND',
-    headers: {
-      Authorization: `Basic ${btoa(updaterShare + ':')}`
-    }
-  })
-  if (response.status >= 400) {
-    throw new Error('Failed to fetch firmware versions (' + response.status + ')')
-  }
-  const data = await response.text()
+function fetchChannels (target) {
+  return fetch('https://up.momentum-fw.dev/firmware/directory.json')
+    .then((response) => {
+      if (response.status >= 400) {
+        throw new Error('Failed to fetch firmware channels (' + response.status + ')')
+      }
+      return response.json()
+    })
+    .then((data) => {
+      const release = data.channels.find(e => e.id === 'release')
+      const dev = data.channels.find(e => e.id === 'development')
 
-  const res = (new DOMParser()).parseFromString(data, 'text/xml')
-  const versions = {}
-  for (const file of res.getElementsByTagName('d:response')) {
-    const path = file.getElementsByTagName('d:href')[0].textContent.trim()
-    if (!(path.startsWith(webdav) && path.endsWith('.tgz'))) continue
-    const version = path.slice(webdav.length, -'.tgz'.length)
-    const url = `${cloud}/s/${updaterShare}/download?path=/&files=${version}`
-    const date = version.split('_')[1]
-    versions[version] = {
-      value: version,
-      label: version.split('_')[0],
-      date: `${date.slice(0, 2)}-${date.slice(2, 4)}-${date.slice(4)}`,
-      url: url + '.tgz',
-      changelog: null,
-      changelogUrl: url + '.md',
-      files: [{
-        url: url,
-        target: target,
-        type: 'update_tgz'
-      }]
-    }
-  }
-  return versions
+      function formatChannel (channel) {
+        channel.versions.sort((a, b) => {
+          if ((a.version.startsWith('mntm-') && b.version.startsWith('mntm-')) &&
+            (parseInt(a.version.slice('mntm-'.length)) < parseInt(b.version.slice('mntm-'.length)))) return 1
+          else return -1
+        })
+        const output = {
+          version: '',
+          date: '',
+          url: '',
+          files: [],
+          changelog: ''
+        }
+        const updater = channel.versions[0].files.find(file => file.target === 'f' + target && file.type === 'update_tgz')
+        if (updater) {
+          output.url = updater.url
+        }
+        output.version = channel.versions[0].version
+        output.date = new Date(channel.versions[0].timestamp * 1000).toISOString().slice(0, 10)
+        output.files = channel.versions[0].files.sort((a, b) => {
+          if (a.url.match(/[\w.]+$/g)[0] > b.url.match(/[\w.]+$/g)[0]) return 1
+          else return -1
+        })
+        let changelog = channel.versions[0].changelog
+        changelog = changelog.replaceAll(/^( *)[-*] (.*?)\r?\n/gm, (match, g1, g2, offset, string, groups) => `<li style="padding-left: ${(g1 ? g1.length * 10 : 0) + 10}px">${g2}</li>`)
+        for (let i = 5; i > 0; i--) {
+          changelog = changelog.replaceAll(RegExp(`^${'#'.repeat(i)} (.*?)(\r?\n)+`, 'gm'), `<h${i}>$1</h${i}>`)
+        }
+        // eslint-disable-next-line
+        changelog = changelog.replaceAll(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a target="_blank" href="$2">$1</a>')
+        changelog = changelog.replaceAll(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        changelog = changelog.replaceAll(/`(.*?)`/g, '<code>$1</code>')
+        changelog = changelog.replaceAll(/^\s*\[\/\/\]:.*?(\r?\n)+/gm, '')
+        changelog = changelog.trimEnd().replaceAll(/\r?\n/g, '\n<br>\n')
+        output.changelog = changelog
+        return output
+      }
+
+      const releaseChannel = formatChannel(release)
+      const devChannel = formatChannel(dev)
+
+      return { release: releaseChannel, dev: devChannel }
+    })
 }
 
 async function fetchFirmware (url) {
@@ -141,7 +157,7 @@ export {
   Operation,
   fetchPacks,
   fetchPack,
-  fetchVersions,
+  fetchChannels,
   fetchFirmware,
   unpack,
   bytesToSize

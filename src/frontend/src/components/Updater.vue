@@ -4,34 +4,31 @@
       <template v-if="flags.ableToUpdate && info.storage_sdcard_present">
         <div class="flex q-mt-sm">
           <q-select
-            v-model="selected"
-            :options="options"
-            :suffix="options.find(({label}) => label === selected.label) ? options.find(({label}) => label === selected.label).date : ''"
+            v-model="fwModel"
+            :options="fwOptions"
+            :suffix="fwOptions.find(({label}) => label === fwModel.label) ? fwOptions.find(({label}) => label === fwModel.label).version : ''"
             id="fw-select"
-            style="width: 210px; border-radius: 14px 14px 14px 0px; border-width: 2px;"
-            popup-content-style="width: 210px; height: auto; max-height: 320px; border-radius: 14px 14px 14px 0px; border: 2px solid white;"
+            style="width: 222px; border-radius: 14px; border-width: 2px;"
+            popup-content-style="width: 222px; height: auto; max-height: 320px; border-radius: 14px; border: 2px solid white;"
             popup-content-class="bg-black text-gray-3"
             options-selected-class="bg-black text-white"
             behavior="menu"
-            menu-self="center middle"
-            menu-anchor="center middle"
             borderless
-            options-dense
             dark
-            >
+          >
             <template v-slot:option="scope">
-              <q-item v-bind="scope.itemProps" style="padding: 12px;">
+              <q-item v-bind="scope.itemProps">
                 <q-item-section class="items-start">
-                  <q-item-label v-text="scope.opt.label" class="fw-option-label" />
+                  <q-item-label v-text="scope.opt.label" />
                 </q-item-section>
                 <q-item-section class="items-end">
-                  <q-item-label v-text="scope.opt.date" />
+                  <q-item-label v-text="scope.opt.version" :class="'fw-option-label ' + scope.opt.value"/>
                 </q-item-section>
               </q-item>
             </template>
           </q-select>
           <q-btn
-            v-if="selected"
+            v-if="fwModel"
             @click="update()"
             padding="12px 30px"
             :class="(!$q.screen.xs ? 'q-ml-lg' : 'q-mt-sm') + ' main-btn'"
@@ -56,15 +53,19 @@
         v-if="write.filename.length > 0"
         :title="write.filename"
         :progress="write.progress"
+        style="width: 400px"
       />
     </template>
   </div>
-  <div id="changelog"><br>Loading changelog...</div>
+  <div
+    v-if="flags.ableToUpdate && info.storage_sdcard_present && fwModel.value === 'release'" id="changelog"
+    v-html="channels[fwModel.value] ? channels[fwModel.value].changelog : ''"
+  />
 </template>
 
 <script>
 import { defineComponent, ref } from 'vue'
-import { fetchVersions, fetchFirmware } from '../util/util'
+import { fetchChannels, fetchFirmware } from '../util/util'
 import ProgressBar from './ProgressBar.vue'
 import semver from 'semver'
 import asyncSleep from 'simple-async-sleep'
@@ -92,13 +93,16 @@ export default defineComponent({
         updateInProgress: false,
         updateError: false
       }),
-      versions: ref({}),
-      selected: ref({
-        label: 'Loading...', value: '', version: ''
+      channels: ref({}),
+      fwModel: ref({
+        label: 'Release', value: 'release', version: ''
       }),
-      options: ref([
+      fwOptions: ref([
         {
-          label: 'Loading...', value: '', version: ''
+          label: 'Release', value: 'release', version: ''
+        },
+        {
+          label: 'Dev', value: 'dev', version: ''
         }
       ]),
       updateStage: ref(''),
@@ -110,25 +114,8 @@ export default defineComponent({
   },
 
   watch: {
-    async selected (version, _) {
-      const changelogElem = document.getElementById('changelog')
-      if (!version.changelog) {
-        changelogElem.innerHTML = '<br>Loading changelog...'
-        const res = await fetch(version.changelogUrl)
-        let changelog = await res.text()
-        changelog = changelog.replaceAll(/^( *)[-*] (.*?)\n/gm, (match, g1, g2, offset, string, groups) => `<li style="padding-left: ${(g1 ? g1.length * 10 : 0) + 10}px">${g2}</li>`)
-        for (let i = 5; i > 0; i--) {
-          changelog = changelog.replaceAll(RegExp(`^${'#'.repeat(i)} (.*?)\n+`, 'gm'), `<h${i}>$1</h${i}>`)
-        }
-        // eslint-disable-next-line
-        changelog = changelog.replaceAll(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a target="_blank" href="$2">$1</a>')
-        changelog = changelog.replaceAll(/\*\*(.*?)\*\*/g, '<b>$1</b>')
-        changelog = changelog.replaceAll(/`(.*?)`/g, '<code>$1</code>')
-        changelog = changelog.replaceAll(/^\s*\[\/\/\]:.*?\n+/gm, '')
-        changelog = changelog.trimEnd().replaceAll('\n', '\n<br>\n')
-        version.changelog = changelog
-      }
-      changelogElem.innerHTML = version.changelog
+    async fwModel (newModel, oldModel) {
+      localStorage.setItem('selectedFwChannel', newModel.value)
     }
   },
 
@@ -159,8 +146,8 @@ export default defineComponent({
 
     async loadFirmware () {
       this.updateStage = 'Loading firmware bundle...'
-      if (this.versions[this.selected.value] && this.versions[this.selected.value].url) {
-        const files = await fetchFirmware(this.versions[this.selected.value].url)
+      if (this.channels[this.fwModel.value] && this.channels[this.fwModel.value].url) {
+        const files = await fetchFirmware(this.channels[this.fwModel.value].url)
           .catch(error => {
             this.flags.updateError = true
             this.updateStage = error
@@ -177,7 +164,7 @@ export default defineComponent({
           .finally(() => {
             this.$emit('log', {
               level: 'debug',
-              message: 'Updater: Downloaded firmware from ' + this.versions[this.selected.value].url
+              message: 'Updater: Downloaded firmware from ' + this.channels[this.fwModel.value].url
             })
           })
 
@@ -263,15 +250,15 @@ export default defineComponent({
           .catch(error => this.rpcErrorHandler(error, 'system.reboot'))
       } else {
         this.flags.updateError = true
-        this.updateStage = 'Failed to fetch firmware'
+        this.updateStage = 'Failed to fetch channel'
         this.$emit('showNotif', {
-          message: 'Unable to load firmware from the cloud server. Reload the page and try again.',
+          message: 'Unable to load firmware channel from the build server. Reload the page and try again.',
           color: 'negative',
           reloadBtn: true
         })
         this.$emit('log', {
           level: 'error',
-          message: 'Updater: Failed to fetch firmware'
+          message: 'Updater: Failed to fetch channel'
         })
       }
     },
@@ -296,22 +283,29 @@ export default defineComponent({
   },
 
   async mounted () {
-    this.versions = await fetchVersions(this.info.hardware_target)
+    this.channels = await fetchChannels(this.info.hardware_target)
       .catch(error => {
         this.$emit('showNotif', {
-          message: 'Unable to load firmware versions from the cloud server. Reload the page and try again.',
+          message: 'Unable to load firmware channels from the build server. Reload the page and try again.',
           color: 'negative',
           reloadBtn: true
         })
         this.$emit('log', {
           level: 'error',
-          message: 'Updater: failed to fetch versions'
+          message: 'Updater: failed to fetch channels'
         })
         throw error
       })
     this.compareVersions()
-    this.options = Object.values(this.versions).sort((a, b) => (a.value < b.value) ? +1 : -1)
-    this.selected = this.options[0]
+    this.fwOptions[0].version = this.channels.release.version
+    this.fwOptions[1].version = this.channels.dev.version
+
+    const selectedBefore = this.fwOptions.find(e => e.value === localStorage.getItem('selectedFwChannel'))
+    if (selectedBefore) {
+      this.fwModel = selectedBefore
+    } else {
+      this.fwModel = this.fwOptions[0]
+    }
   }
 })
 </script>
