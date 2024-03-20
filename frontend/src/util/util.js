@@ -3,8 +3,7 @@ import pako from 'pako'
 import { unzipSync } from 'fflate'
 
 class Operation {
-  // eslint-disable-next-line
-  constructor() {
+  constructor () {
     this.resolve = undefined
     this.reject = undefined
   }

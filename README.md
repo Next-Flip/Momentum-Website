@@ -9,9 +9,9 @@ This project is structured into two folders:
     The `public` folder is what you see when visiting the website. It's the compiled files for the webupdater & asset packs, and all the other static pages.
 
 
-2. [src](https://github.com/Next-Flip/Momentum-Website/tree/main/src):
+2. [frontend](https://github.com/Next-Flip/Momentum-Website/tree/main/frontend):
 
-    The `src` folder contains the sourcecode for the webupdater & asset pack page. This is compiled, then put into the public static assets.
+    The `frontend` folder contains the sourcecode for the webupdater & asset pack page. This will be compiled, then put into the public static assets.
 
 ### Development workflow:
 
@@ -39,11 +39,11 @@ The webupdater and asset-packs page use [Vue](https://github.com/vuejs/) to hand
     quasar build -m spa
     ```
 
-3. Finally, opy the built files over into the `public` folder. You can distinguish generated files by the random filenames. Also you'll need to copy the main index page into the frame directories. Now you can serve it with any webserver software.
+3. Finally, copy the built files over into the `public` folder. You can distinguish generated files by the random filenames. Also you'll need to copy the main index page into the frame directories. Now you can serve it with any webserver software.
 
 ### Credits:
 
-The core backend for the webupdater and the asset packs (as in, the Vue part) is largely based on the base of [lab.flipper.net](https://github.com/flipperdevices/lab.flipper.net).
+The core backend for the webupdater and the asset packs (as in, the Vue part) is largely built on the base of [lab.flipper.net](https://github.com/flipperdevices/lab.flipper.net).
 
 <br><br>
 
