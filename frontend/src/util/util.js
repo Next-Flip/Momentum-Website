@@ -139,6 +139,23 @@ async function fetchFirmware (url) {
   return buffer
 }
 
+async function fetchRegions () {
+  return fetch('https://update.flipperzero.one/regions/api/v0/bundle')
+    .then((response) => {
+      if (response.status >= 400) {
+        throw new Error('Failed to fetch region (' + response.status + ')')
+      }
+      return response.json()
+    })
+    .then(result => {
+      if (result.error) {
+        throw new Error(result.error.text)
+      } else if (result.success) {
+        return result.success
+      }
+    })
+}
+
 function unpack (buffer) {
   const ungzipped = pako.ungzip(new Uint8Array(buffer))
   return untar(ungzipped.buffer)
@@ -158,6 +175,7 @@ export {
   fetchPack,
   fetchChannels,
   fetchFirmware,
+  fetchRegions,
   unpack,
   bytesToSize
 }

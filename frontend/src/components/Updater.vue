@@ -65,10 +65,11 @@
 
 <script>
 import { defineComponent, ref } from 'vue'
-import { fetchChannels, fetchFirmware } from '../util/util'
+import { fetchChannels, fetchFirmware, fetchRegions } from '../util/util'
 import ProgressBar from './ProgressBar.vue'
 import semver from 'semver'
 import asyncSleep from 'simple-async-sleep'
+import { PB } from '../flipper/protobuf/proto-compiled'
 
 export default defineComponent({
   name: 'Updater',
@@ -146,6 +147,61 @@ export default defineComponent({
 
     async loadFirmware () {
       this.updateStage = 'Loading firmware bundle...'
+      if (this.info.hardware_region !== '0') {
+        const regions = await fetchRegions()
+          .catch(error => {
+            this.$emit('showNotif', {
+              message: 'Failed to fetch regions: ' + error.toString(),
+              color: 'negative'
+            })
+            this.$emit('log', {
+              level: 'error',
+              message: 'Updater: Failed to fetch regions: ' + error.toString()
+            })
+            throw error
+          })
+
+        let bands
+        if (regions.countries[regions.country]) {
+          bands = regions.countries[regions.country].map(e => regions.bands[e])
+        } else {
+          bands = regions.default.map(e => regions.bands[e])
+          regions.country = 'JP'
+        }
+        const options = {
+          countryCode: regions.country,
+          bands: []
+        }
+
+        for (const band of bands) {
+          const bandOptions = {
+            start: band.start,
+            end: band.end,
+            powerLimit: band.max_power,
+            dutyCycle: band.duty_cycle
+          }
+          const message = PB.Region.Band.create(bandOptions)
+          options.bands.push(message)
+        }
+
+        this.$emit('log', {
+          level: 'debug',
+          message: 'Updater: Region provisioning message: ' + JSON.stringify(options)
+        })
+
+        options.countryCode = new TextEncoder().encode(regions.country)
+        const message = PB.Region.create(options)
+        const encoded = new Uint8Array(PB.Region.encodeDelimited(message).finish()).slice(1)
+
+        await this.flipper.commands.storage.write('/int/.region_data', encoded)
+          .catch(error => this.rpcErrorHandler(error, 'storage.write'))
+
+        this.$emit('log', {
+          level: 'info',
+          message: 'Updater: Set Sub-GHz region: ' + regions.country
+        })
+      }
+
       if (this.channels[this.fwModel.value] && this.channels[this.fwModel.value].url) {
         const files = await fetchFirmware(this.channels[this.fwModel.value].url)
           .catch(error => {
