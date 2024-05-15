@@ -26,34 +26,13 @@ class Operation {
 }
 
 async function fetchPacks () {
-  return []
-  // const response = await fetch(`${cloud}${webdav}`, {
-  //   method: 'PROPFIND',
-  //   headers: {
-  //     Authorization: `Basic ${btoa(packsShare + ':')}`
-  //   }
-  // })
-  // if (response.status >= 400) {
-  //   throw new Error('Failed to fetch asset packs (' + response.status + ')')
-  // }
-  // const data = await response.text()
+  const response = await fetch('https://up.momentum-fw.dev/asset-packs/directory.json')
+  if (response.status >= 400) {
+    throw new Error('Failed to fetch asset packs (' + response.status + ')')
+  }
+  const data = await response.json()
 
-  // const res = (new DOMParser()).parseFromString(data, 'text/xml')
-  // const packs = []
-  // for (const file of res.getElementsByTagName('d:response')) {
-  //   const path = file.getElementsByTagName('d:href')[0].textContent.trim()
-  //   if (!(path.startsWith(webdav) && path.endsWith('.zip'))) continue
-  //   const [name, author] = decodeURI(path.slice(webdav.length, -'.zip'.length)).split('.')
-  //   const url = `${cloud}/s/${packsShare}/download?path=/&files=${name}.${author}`
-  //   packs.push({
-  //     name: name,
-  //     author: author,
-  //     description: '',
-  //     image: url + '.png',
-  //     download: url + '.zip'
-  //   })
-  // }
-  // return packs
+  return data.packs
 }
 
 async function fetchPack (url) {

@@ -12,25 +12,32 @@
       <q-list v-else class="packs-grid">
         <q-card
           v-for="pack in packs"
-          :key="pack.name"
+          :key="pack.id"
           v-bind="pack"
           class="my-card"
           dark
         >
-          <img :src="pack.image">
+          <!-- TODO: Cycle previews -->
+          <!-- TODO: Support video previews -->
+          <img :src="pack.preview_urls[0]">
 
-          <div class="text-h5 text-bold text-center">{{ pack.name }}</div>
-          <div class="text-h7 text-center">By {{ pack.author }}</div>
+          <div class="text-h5 q-mx-md text-center text-bold">{{ pack.title }}</div>
+          <div class="text-h7 q-mx-md text-center">By {{ pack.author }}</div>
+
+          <!-- TODO: Button to open pack.source_url -->
+
+          <!-- TODO: Show pack.description -->
 
           <q-card-actions :align="'stretch'">
+            <!-- TODO: Support multiple file types and match for type=pack_zip -->
             <q-btn
-              :href="pack.download"
+              :href="pack.files[0].url"
               class="main-btn"
               style="flex: 1;"
               flat
             >Download</q-btn>
             <q-btn
-              v-if="pack.name !== installing"
+              v-if="pack.id !== installing"
               :disable="!serialSupported || installing !== null || rpcToggling"
               @click="install(pack)"
               class="main-btn"
@@ -98,9 +105,11 @@ export default defineComponent({
         return
       }
       try {
-        this.installing = pack.name
+        this.installing = pack.id
         this.progress = 0
-        const files = await fetchPack(pack.download)
+        // TODO: Support multiple file types and match for type=pack_tar
+        const url = pack.files[0].url
+        const files = await fetchPack(url)
           .catch(error => {
             this.$emit('showNotif', {
               message: 'Failed to fetch pack: ' + error.toString(),
@@ -115,7 +124,7 @@ export default defineComponent({
           .finally(() => {
             this.$emit('log', {
               level: 'debug',
-              message: 'Packs: Downloaded pack from ' + pack.download
+              message: 'Packs: Downloaded pack from ' + url
             })
           })
 
@@ -137,6 +146,7 @@ export default defineComponent({
             })
         }
 
+        // TODO: Upload as tar and then extract
         let i = 0
         for (const [name, file] of fileList) {
           if (file.byteLength === 0) {
