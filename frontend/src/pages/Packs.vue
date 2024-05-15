@@ -21,12 +21,26 @@
           <!-- TODO: Support video previews -->
           <img :src="pack.preview_urls[0]">
 
-          <div class="text-h5 q-mx-md text-center text-bold">{{ pack.title }}</div>
-          <div class="text-h7 q-mx-md text-center">By {{ pack.author }}</div>
-
-          <!-- TODO: Button to open pack.source_url -->
-
-          <!-- TODO: Show pack.description -->
+          <div class="q-mt-xs q-ml-md q-mr-sm flex flex-col items-center justify-between">
+            <div class="text-left text-bold">
+              <div class="text-h5">{{ pack.title }}</div>
+              <div class="text-h7">by {{ pack.author }}</div>
+            </div>
+            <q-btn
+              v-if="pack.source_url"
+              :href="pack.source_url"
+              target="_blank"
+              icon="open_in_new"
+              class="main-btn"
+              style="border: none; padding: 0; margin: 0; width: 50px; height: 50px;"
+              flat
+            />
+            <!-- TODO: Add icon indicators for pack content -->
+            <div
+              v-if="pack.description"
+              class="text-h7 q-mt-sm"
+            >{{ pack.description }}</div>
+          </div>
 
           <q-card-actions :align="'stretch'">
             <!-- TODO: Support multiple file types and match for type=pack_zip -->
@@ -36,6 +50,7 @@
               style="flex: 1;"
               flat
             >Download</q-btn>
+            <!-- TODO: Maybe support queueing to install after -->
             <q-btn
               v-if="pack.id !== installing"
               :disable="!serialSupported || installing !== null || rpcToggling"
