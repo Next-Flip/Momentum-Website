@@ -57,10 +57,9 @@
       />
     </template>
   </div>
-  <div
-    v-if="flags.ableToUpdate && info.storage_sdcard_present && fwModel.value === 'release'" id="changelog"
-    v-html="channels[fwModel.value] ? channels[fwModel.value].changelog : ''"
-  />
+  <div v-if="flags.ableToUpdate && info.storage_sdcard_present" id="changelog">
+    <div v-html="channels[fwModel.value] ? channels[fwModel.value].changelog : ''" />
+  </div>
 </template>
 
 <script>
