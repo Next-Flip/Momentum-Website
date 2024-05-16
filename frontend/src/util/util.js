@@ -91,6 +91,7 @@ function fetchChannels (target) {
         // eslint-disable-next-line
         changelog = changelog.replaceAll(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a target="_blank" href="$2">$1</a>')
         changelog = changelog.replaceAll(/\*\*(.*?)\*\*/g, '<b>$1</b>')
+        changelog = changelog.replaceAll(/__(.*?)__/g, '<u>$1</u>')
         changelog = changelog.replaceAll(/`(.*?)`/g, '<code>$1</code>')
         changelog = changelog.replaceAll(/^\s*\[\/\/\]:.*?(\r?\n)+/gm, '')
         changelog = changelog.trimEnd().replaceAll(/\r?\n/g, '\n<br>\n')
