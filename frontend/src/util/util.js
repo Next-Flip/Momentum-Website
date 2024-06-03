@@ -107,6 +107,7 @@ function fetchChannels (target) {
         for (let i = 5; i > 0; i--) {
           changelog = changelog.replaceAll(RegExp(`^${'#'.repeat(i)} (.*?)(\r?\n)+`, 'gm'), `<h${i}>$1</h${i}>`)
         }
+        // TODO: use q-markdown
         // eslint-disable-next-line
         changelog = changelog.replaceAll(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a target="_blank" href="$2">$1</a>')
         changelog = changelog.replaceAll(/\*\*(.*?)\*\*/g, '<b>$1</b>')
