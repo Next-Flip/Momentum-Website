@@ -14,7 +14,8 @@
           v-for="pack in packs"
           :key="pack.id"
           v-bind="pack"
-          class="my-card"
+          class="flex justify-between"
+          style="flex-direction: column;"
           dark
         >
           <!-- TODO: Cycle previews -->
@@ -35,11 +36,11 @@
               flat
             />
             <!-- TODO: Add icon indicators for pack content -->
-            <div
-              v-if="pack.description"
-              class="text-h7 q-mt-sm"
-            >{{ pack.description }}</div>
           </div>
+          <div
+            v-if="pack.description"
+            class="text-h7 q-mt-sm q-mx-md"
+          >{{ pack.description }}</div>
 
           <q-card-actions :align="'stretch'">
             <q-btn
