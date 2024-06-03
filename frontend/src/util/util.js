@@ -1,6 +1,5 @@
 import { untar } from '../untar/untar.js'
 import pako from 'pako'
-import { unzipSync } from 'fflate'
 
 class Operation {
   constructor () {
@@ -41,11 +40,10 @@ async function fetchPack (url) {
       if (response.status >= 400) {
         throw new Error('Failed to fetch resources (' + response.status + ')')
       }
-      const buffer = await response.arrayBuffer()
-      return unzipSync(new Uint8Array(buffer))
+      return await response.arrayBuffer()
     })
 
-  return buffer
+  return new Uint8Array(buffer)
 }
 
 function fetchChannels (target) {
