@@ -32,21 +32,15 @@ async function fetchPacks () {
   const data = await response.json()
 
   const packs = data.packs.map((pack) => {
-    const output = {
-      id: pack.id,
-      name: pack.name,
-      author: pack.author,
-      preview_urls: pack.preview_urls
-    }
     for (const file of pack.files) {
       if (file.type === 'pack_targz') {
-        output.url_targz = file.url
+        pack.url_targz = file.url
       } else if (file.type === 'pack_zip') {
-        output.url_zip = file.url
+        pack.url_zip = file.url
       }
     }
-    if (output.url_targz && output.url_zip) {
-      return output
+    if (pack.url_targz && pack.url_zip) {
+      return pack
     } else {
       return null
     }
