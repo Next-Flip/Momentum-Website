@@ -189,6 +189,15 @@ export default defineComponent({
               message: 'Packs: storage.tarExtract: ' + tempFile
             })
           })
+
+        await this.flipper.commands.storage.remove(tempFile, false)
+          .catch(error => this.rpcErrorHandler(error, 'storage.remove'))
+          .finally(() => {
+            this.$emit('log', {
+              level: 'debug',
+              message: 'Packs: storage.remove: ' + tempFile
+            })
+          })
       } finally {
         this.installing = null
         this.progress = 0
