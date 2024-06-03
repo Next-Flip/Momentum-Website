@@ -18,12 +18,11 @@
           dark
         >
           <!-- TODO: Cycle previews -->
-          <!-- TODO: Support video previews -->
           <img :src="pack.preview_urls[0]">
 
           <div class="q-mt-xs q-ml-md q-mr-sm flex flex-col items-center justify-between">
             <div class="text-left text-bold">
-              <div class="text-h5">{{ pack.title }}</div>
+              <div class="text-h5">{{ pack.name }}</div>
               <div class="text-h7">by {{ pack.author }}</div>
             </div>
             <q-btn
@@ -43,9 +42,8 @@
           </div>
 
           <q-card-actions :align="'stretch'">
-            <!-- TODO: Support multiple file types and match for type=pack_zip -->
             <q-btn
-              :href="pack.files[0].url"
+              :href="pack.url_zip"
               class="main-btn"
               style="flex: 1;"
               flat
@@ -120,11 +118,11 @@ export default defineComponent({
         return
       }
       try {
+        // TODO: Add back progress with this.progress
         this.installing = pack.id
         this.progress = 0
-        // TODO: Support multiple file types and match for type=pack_tar
-        const url = pack.files[0].url
-        const files = await fetchPack(url)
+        const url = pack.url_targz
+        const packTarGz = await fetchPack(url)
           .catch(error => {
             this.$emit('showNotif', {
               message: 'Failed to fetch pack: ' + error.toString(),
@@ -143,53 +141,53 @@ export default defineComponent({
             })
           })
 
-        const fileList = Object.entries(files).sort((a, b) => (a[0] > b[0]) ? +1 : -1)
-        let path = '/ext'
-        let mkdir = 'asset_packs/' + fileList[0][0]
-        if (mkdir.endsWith('/')) {
-          mkdir = mkdir.slice(0, -1)
-        }
-        for (const segment of mkdir.split('/')) {
-          path += '/' + segment
-          await this.flipper.commands.storage.mkdir(path)
-            .catch(error => this.rpcErrorHandler(error, 'storage.mkdir'))
-            .finally(() => {
-              this.$emit('log', {
-                level: 'debug',
-                message: 'Packs: storage.mkdir: ' + path
-              })
-            })
-        }
-
-        // TODO: Upload as tar and then extract
-        let i = 0
-        for (const [name, file] of fileList) {
-          if (file.byteLength === 0) {
-            path = '/ext/asset_packs/' + name
-            if (name.endsWith('/')) {
-              path = path.slice(0, -1)
+        const mkdirParents = async (path) => {
+          if (path.endsWith('/')) {
+            path = path.slice(0, -1)
+          }
+          let full = ''
+          for (const segment of path.split('/')) {
+            if (full !== '/') {
+              full += '/'
             }
-            await this.flipper.commands.storage.mkdir(path)
+            full += segment
+            if (full.length < '/ext/*'.length) {
+              continue // Cannot mkdir filesystems root, needs to be atleast fs root + 1 char
+            }
+            await this.flipper.commands.storage.mkdir(full)
               .catch(error => this.rpcErrorHandler(error, 'storage.mkdir'))
               .finally(() => {
                 this.$emit('log', {
                   level: 'debug',
-                  message: 'Packs: storage.mkdir: ' + path
-                })
-              })
-          } else {
-            await this.flipper.commands.storage.write('/ext/asset_packs/' + name, file.buffer)
-              .catch(error => this.rpcErrorHandler(error, 'storage.write'))
-              .finally(() => {
-                this.$emit('log', {
-                  level: 'debug',
-                  message: 'Packs: storage.write: /ext/asset_packs/' + name
+                  message: 'Packs: storage.mkdir: ' + full
                 })
               })
           }
-          i++
-          this.progress = i / fileList.length
         }
+
+        const extractPath = '/ext/asset_packs'
+        const tempPath = '/ext/.tmp/mntm'
+        const tempFile = `${tempPath}/${pack.id}.tar.gz`
+        await mkdirParents(extractPath)
+        await mkdirParents(tempPath)
+
+        await this.flipper.commands.storage.write(tempFile, packTarGz)
+          .catch(error => this.rpcErrorHandler(error, 'storage.write'))
+          .finally(() => {
+            this.$emit('log', {
+              level: 'debug',
+              message: 'Packs: storage.write: ' + tempFile
+            })
+          })
+
+        await this.flipper.commands.storage.tarExtract(tempFile, extractPath)
+          .catch(error => this.rpcErrorHandler(error, 'storage.tarExtract'))
+          .finally(() => {
+            this.$emit('log', {
+              level: 'debug',
+              message: 'Packs: storage.tarExtract: ' + tempFile
+            })
+          })
       } finally {
         this.installing = null
         this.progress = 0
