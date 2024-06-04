@@ -18,8 +18,22 @@
           style="flex-direction: column;"
           dark
         >
-          <!-- TODO: Cycle previews -->
-          <img :src="pack.preview_urls[0]">
+          <q-carousel
+            animated
+            v-model="slides[pack.id]"
+            :arrows="pack.preview_urls.length > 1"
+            :navigation="pack.preview_urls.length > 1"
+            transition-prev="slide-right"
+            transition-next="slide-left"
+            infinite
+          >
+            <q-carousel-slide
+              v-for="(preview_url, i) in pack.preview_urls"
+              :key="i"
+              :name="i + 1"
+              :img-src="preview_url"
+            />
+          </q-carousel>
 
           <div class="q-mt-xs q-ml-md q-mr-sm flex flex-col items-center justify-between">
             <div class="text-left text-bold">
@@ -93,6 +107,7 @@ export default defineComponent({
   setup () {
     return {
       packs: ref(null),
+      slides: ref({}),
       flags: ref({
         restarting: false,
         rpcActive: false,
@@ -351,7 +366,7 @@ export default defineComponent({
   },
 
   async mounted () {
-    this.packs = await fetchPacks()
+    const packs = await fetchPacks()
       .catch(error => {
         this.$emit('showNotif', {
           message: 'Unable to load asset packs from the server. Reload the page and try again.',
@@ -364,6 +379,10 @@ export default defineComponent({
         })
         throw error
       })
+    for (const pack of packs) {
+      this.slides[pack.id] = 1
+    }
+    this.packs = packs
     if (this.connected && this.info !== null && this.info.storage_databases_present) {
       await this.start()
     }
