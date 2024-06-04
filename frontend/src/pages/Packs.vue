@@ -64,7 +64,7 @@
               :style="`flex: 1; background-image: linear-gradient(to right, #a883e9 ${progress * 100}%, transparent ${progress * 100}%);`"
               disable
               flat
-            >Installing</q-btn>
+            >{{ installStatus }}</q-btn>
           </q-card-actions>
 
         </q-card>
@@ -99,6 +99,7 @@ export default defineComponent({
         rpcToggling: false
       }),
       progress: ref(0),
+      installStatus: ref(null),
       installing: ref(null)
     }
   },
@@ -120,6 +121,7 @@ export default defineComponent({
       }
       try {
         // TODO: Add back progress with this.progress
+        this.installStatus = 'Loading'
         this.installing = pack.id
         this.progress = 0
         const url = pack.url_targz
@@ -172,6 +174,7 @@ export default defineComponent({
         await mkdirParents(extractPath)
         await mkdirParents(tempPath)
 
+        this.installStatus = 'Copying'
         await this.flipper.commands.storage.write(tempFile, packTarGz)
           .catch(error => this.rpcErrorHandler(error, 'storage.write'))
           .finally(() => {
@@ -181,6 +184,7 @@ export default defineComponent({
             })
           })
 
+        this.installStatus = 'Extracting'
         await this.flipper.commands.storage.tarExtract(tempFile, extractPath)
           .catch(error => this.rpcErrorHandler(error, 'storage.tarExtract'))
           .finally(() => {
@@ -190,6 +194,7 @@ export default defineComponent({
             })
           })
 
+        this.installStatus = 'Cleanup'
         await this.flipper.commands.storage.remove(tempFile, false)
           .catch(error => this.rpcErrorHandler(error, 'storage.remove'))
           .finally(() => {
@@ -200,6 +205,7 @@ export default defineComponent({
           })
       } finally {
         this.installing = null
+        this.installStatus = null
         this.progress = 0
       }
     },
