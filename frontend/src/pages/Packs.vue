@@ -74,7 +74,7 @@
 </template>
 
 <script>
-import { fetchPacks, fetchPack } from '../util/util'
+import { fetchPacks } from '../util/util'
 import { defineComponent, ref } from 'vue'
 import asyncSleep from 'simple-async-sleep'
 
@@ -120,12 +120,44 @@ export default defineComponent({
         return
       }
       try {
-        // TODO: Add back progress with this.progress
-        this.installStatus = 'Loading'
-        this.installing = pack.id
+        const stepCount = 3
+        let step = -1
+        const setProgress = (progress) => {
+          this.progress = (progress / stepCount) + (1 / stepCount * step)
+        }
         this.progress = 0
+
+        this.installStatus = 'Loading'
+        step++
+        this.installing = pack.id
         const url = pack.url_targz
-        const packTarGz = await fetchPack(url)
+        const packTarGz = await fetch(url)
+          .then(async response => {
+            if (response.status >= 400) {
+              throw new Error('Pack returned ' + response.status)
+            }
+            // Read in chunks
+            const totalLength = Number(response.headers.get('content-length'))
+            const reader = response.body.getReader()
+            let receivedLength = 0
+            const chunks = []
+            while (true) {
+              const { done, value } = await reader.read()
+              if (done) break
+              chunks.push(value)
+              receivedLength += value.length
+              // Update progress
+              setProgress(receivedLength / totalLength)
+            }
+            // Piece together the chunks into one array
+            const chunksAll = new Uint8Array(receivedLength)
+            let position = 0
+            for (const chunk of chunks) {
+              chunksAll.set(chunk, position)
+              position += chunk.length
+            }
+            return chunksAll
+          })
           .catch(error => {
             this.$emit('showNotif', {
               message: 'Failed to fetch pack: ' + error.toString(),
@@ -175,24 +207,42 @@ export default defineComponent({
         await mkdirParents(tempPath)
 
         this.installStatus = 'Copying'
+        step++
+        const unbind = this.flipper.emitter.on('storageWriteRequest/progress', e => {
+          setProgress(e.progress / e.total)
+        })
+        let start = performance.now()
+        let took = 0
         await this.flipper.commands.storage.write(tempFile, packTarGz)
           .catch(error => this.rpcErrorHandler(error, 'storage.write'))
           .finally(() => {
+            took = performance.now() - start
             this.$emit('log', {
               level: 'debug',
-              message: 'Packs: storage.write: ' + tempFile
+              message: `Packs: storage.write: ${tempFile} took ${Math.round(took)}ms`
             })
           })
+        unbind()
 
         this.installStatus = 'Extracting'
+        step++
+        start = performance.now()
+        // Lord forgive me for I have sinned
+        const expectedExtractTime = took * 10 // Depends on compression ratio and sd speed, 10x is generous
+        const fakeExtractProgress = setInterval(() => {
+          setProgress((performance.now() - start) / expectedExtractTime)
+        }, 250)
         await this.flipper.commands.storage.tarExtract(tempFile, extractPath)
           .catch(error => this.rpcErrorHandler(error, 'storage.tarExtract'))
           .finally(() => {
+            clearInterval(fakeExtractProgress)
+            took = performance.now() - start
             this.$emit('log', {
               level: 'debug',
-              message: 'Packs: storage.tarExtract: ' + tempFile
+              message: `Packs: storage.tarExtract: ${tempFile} to ${extractPath} took ${Math.round(took)}ms`
             })
           })
+        setProgress(1)
 
         this.installStatus = 'Cleanup'
         await this.flipper.commands.storage.remove(tempFile, false)

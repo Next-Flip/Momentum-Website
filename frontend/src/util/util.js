@@ -49,18 +49,6 @@ async function fetchPacks () {
   return packs
 }
 
-async function fetchPack (url) {
-  const buffer = await fetch(url)
-    .then(async response => {
-      if (response.status >= 400) {
-        throw new Error('Failed to fetch resources (' + response.status + ')')
-      }
-      return await response.arrayBuffer()
-    })
-
-  return new Uint8Array(buffer)
-}
-
 function fetchChannels (target) {
   return fetch('https://up.momentum-fw.dev/firmware/directory.json')
     .then((response) => {
@@ -166,7 +154,6 @@ function bytesToSize (bytes) {
 export {
   Operation,
   fetchPacks,
-  fetchPack,
   fetchChannels,
   fetchFirmware,
   fetchRegions,
