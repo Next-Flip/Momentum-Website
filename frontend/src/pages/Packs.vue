@@ -160,6 +160,12 @@ export default defineComponent({
       if (newInfo !== null && newInfo.storage_databases_present && this.connected) {
         await this.start()
       }
+    },
+    async connected (newConnected, oldConnected) {
+      if (newConnected === false && this.fakeExtractProgress !== null) {
+        clearInterval(this.fakeExtractProgress)
+        this.fakeExtractProgress = null
+      }
     }
   },
 
@@ -270,7 +276,10 @@ export default defineComponent({
           let start = performance.now()
           let took = 0
           await this.flipper.commands.storage.write(tempFile, packTarGz)
-            .catch(error => this.rpcErrorHandler(error, 'storage.write'))
+            .catch(error => {
+              this.rpcErrorHandler(error, 'storage.write')
+              throw error
+            })
             .finally(() => {
               took = performance.now() - start
               this.$emit('log', {
@@ -289,7 +298,10 @@ export default defineComponent({
             setProgress((performance.now() - start) / expectedExtractTime)
           }, 250)
           await this.flipper.commands.storage.tarExtract(tempFile, extractPath)
-            .catch(error => this.rpcErrorHandler(error, 'storage.tarExtract'))
+            .catch(error => {
+              this.rpcErrorHandler(error, 'storage.tarExtract')
+              throw error
+            })
             .finally(() => {
               if (this.fakeExtractProgress !== null) {
                 clearInterval(this.fakeExtractProgress)
@@ -405,10 +417,6 @@ export default defineComponent({
       navigator.serial.addEventListener('disconnect', e => {
         this.flags.rpcActive = false
         this.flags.rpcToggling = false
-        if (this.fakeExtractProgress !== null) {
-          clearInterval(this.fakeExtractProgress)
-          this.fakeExtractProgress = null
-        }
         this.$emit('setRpcStatus', false)
       })
     }
