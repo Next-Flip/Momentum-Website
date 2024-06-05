@@ -44,7 +44,7 @@ async function fetchPacks () {
     } else {
       return null
     }
-  })
+  }).filter(pack => pack)
 
   return packs
 }

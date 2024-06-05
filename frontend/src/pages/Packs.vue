@@ -9,6 +9,7 @@
         ></q-spinner>
         <p>Loading Asset Packs...</p>
       </template>
+      <h5 v-else-if="packs.length < 1">Nothing to see here 🤔</h5>
       <q-list v-else class="packs-grid">
         <q-card
           v-for="pack in packs"
