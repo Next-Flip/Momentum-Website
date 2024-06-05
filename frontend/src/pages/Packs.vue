@@ -93,20 +93,27 @@
             >Download</q-btn>
             <!-- TODO: Maybe support queueing to install after -->
             <q-btn
-              v-if="pack.id !== installing"
-              :disable="!serialSupported || installing !== null || rpcToggling"
+              v-if="!installing.includes(pack)"
+              :disable="!serialSupported || rpcToggling"
               @click="install(pack)"
               class="main-btn"
               style="flex: 1;"
               flat
             >{{ !serialSupported ? 'Unsupported' : rpcToggling ? 'Connecting' : !connected ? 'Connect' : 'Install' }}</q-btn>
             <q-btn
-              v-else
+              v-else-if="installing.indexOf(pack) === 0"
               class="main-btn"
               :style="`flex: 1; background-image: linear-gradient(to right, #a883e9 ${progress * 100}%, transparent ${progress * 100}%);`"
               disable
               flat
             >{{ installStatus }}</q-btn>
+            <q-btn
+              v-else
+              class="main-btn"
+              style="flex: 1;"
+              disable
+              flat
+            >Queued</q-btn>
           </q-card-actions>
 
         </q-card>
@@ -143,7 +150,8 @@ export default defineComponent({
       }),
       progress: ref(0),
       installStatus: ref(null),
-      installing: ref(null)
+      installing: ref([]),
+      fakeExtractProgress: ref(null)
     }
   },
 
@@ -162,144 +170,153 @@ export default defineComponent({
         if (!this.rpcToggling) this.$emit('selectPort')
         return
       }
-      try {
-        const stepCount = 3
-        let step = -1
-        const setProgress = (progress) => {
-          this.progress = (progress / stepCount) + (1 / stepCount * step)
-        }
-        this.progress = 0
-
-        this.installStatus = 'Loading'
-        step++
-        this.installing = pack.id
-        const url = pack.url_targz
-        const packTarGz = await fetch(url)
-          .then(async response => {
-            if (response.status >= 400) {
-              throw new Error('Pack returned ' + response.status)
-            }
-            // Read in chunks
-            const totalLength = Number(response.headers.get('content-length'))
-            const reader = response.body.getReader()
-            let receivedLength = 0
-            const chunks = []
-            while (true) {
-              const { done, value } = await reader.read()
-              if (done) break
-              chunks.push(value)
-              receivedLength += value.length
-              // Update progress
-              setProgress(receivedLength / totalLength)
-            }
-            // Piece together the chunks into one array
-            const chunksAll = new Uint8Array(receivedLength)
-            let position = 0
-            for (const chunk of chunks) {
-              chunksAll.set(chunk, position)
-              position += chunk.length
-            }
-            return chunksAll
-          })
-          .catch(error => {
-            this.$emit('showNotif', {
-              message: 'Failed to fetch pack: ' + error.toString(),
-              color: 'negative'
-            })
-            this.$emit('log', {
-              level: 'error',
-              message: 'Packs: Failed to fetch pack: ' + error.toString()
-            })
-            throw error
-          })
-          .finally(() => {
-            this.$emit('log', {
-              level: 'debug',
-              message: 'Packs: Downloaded pack from ' + url
-            })
-          })
-
-        const mkdirParents = async (path) => {
-          if (path.endsWith('/')) {
-            path = path.slice(0, -1)
+      this.installing.push(pack)
+      if (this.installing.length > 1) {
+        return
+      }
+      while (this.installing.length > 0) {
+        try {
+          const stepCount = 3
+          let step = -1
+          const setProgress = (progress) => {
+            this.progress = (progress / stepCount) + (1 / stepCount * step)
           }
-          let full = ''
-          for (const segment of path.split('/')) {
-            if (full !== '/') {
-              full += '/'
-            }
-            full += segment
-            if (full.length < '/ext/*'.length) {
-              continue // Cannot mkdir filesystems root, needs to be atleast fs root + 1 char
-            }
-            await this.flipper.commands.storage.mkdir(full)
-              .catch(error => this.rpcErrorHandler(error, 'storage.mkdir'))
-              .finally(() => {
-                this.$emit('log', {
-                  level: 'debug',
-                  message: 'Packs: storage.mkdir: ' + full
-                })
+          this.progress = 0
+
+          this.installStatus = 'Loading'
+          step++
+          pack = this.installing[0]
+          const url = pack.url_targz
+          const packTarGz = await fetch(url)
+            .then(async response => {
+              if (response.status >= 400) {
+                throw new Error('Pack returned ' + response.status)
+              }
+              // Read in chunks
+              const totalLength = Number(response.headers.get('content-length'))
+              const reader = response.body.getReader()
+              let receivedLength = 0
+              const chunks = []
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                chunks.push(value)
+                receivedLength += value.length
+                // Update progress
+                setProgress(receivedLength / totalLength)
+              }
+              // Piece together the chunks into one array
+              const chunksAll = new Uint8Array(receivedLength)
+              let position = 0
+              for (const chunk of chunks) {
+                chunksAll.set(chunk, position)
+                position += chunk.length
+              }
+              return chunksAll
+            })
+            .catch(error => {
+              this.$emit('showNotif', {
+                message: 'Failed to fetch pack: ' + error.toString(),
+                color: 'negative'
               })
+              this.$emit('log', {
+                level: 'error',
+                message: 'Packs: Failed to fetch pack: ' + error.toString()
+              })
+              throw error
+            })
+            .finally(() => {
+              this.$emit('log', {
+                level: 'debug',
+                message: 'Packs: Downloaded pack from ' + url
+              })
+            })
+
+          const mkdirParents = async (path) => {
+            if (path.endsWith('/')) {
+              path = path.slice(0, -1)
+            }
+            let full = ''
+            for (const segment of path.split('/')) {
+              if (full !== '/') {
+                full += '/'
+              }
+              full += segment
+              if (full.length < '/ext/*'.length) {
+                continue // Cannot mkdir filesystems root, needs to be atleast fs root + 1 char
+              }
+              await this.flipper.commands.storage.mkdir(full)
+                .catch(error => this.rpcErrorHandler(error, 'storage.mkdir'))
+                .finally(() => {
+                  this.$emit('log', {
+                    level: 'debug',
+                    message: 'Packs: storage.mkdir: ' + full
+                  })
+                })
+            }
           }
+
+          const extractPath = '/ext/asset_packs'
+          const tempPath = '/ext/.tmp/mntm'
+          const tempFile = `${tempPath}/${pack.id}.tar.gz`
+          await mkdirParents(extractPath)
+          await mkdirParents(tempPath)
+
+          this.installStatus = 'Copying'
+          step++
+          const unbind = this.flipper.emitter.on('storageWriteRequest/progress', e => {
+            setProgress(e.progress / e.total)
+          })
+          let start = performance.now()
+          let took = 0
+          await this.flipper.commands.storage.write(tempFile, packTarGz)
+            .catch(error => this.rpcErrorHandler(error, 'storage.write'))
+            .finally(() => {
+              took = performance.now() - start
+              this.$emit('log', {
+                level: 'debug',
+                message: `Packs: storage.write: ${tempFile} took ${Math.round(took)}ms`
+              })
+            })
+          unbind()
+
+          this.installStatus = 'Extracting'
+          step++
+          start = performance.now()
+          // Lord forgive me for I have sinned
+          const expectedExtractTime = took * 10 // Depends on compression ratio and sd speed, 10x is generous
+          this.fakeExtractProgress = setInterval(() => {
+            setProgress((performance.now() - start) / expectedExtractTime)
+          }, 250)
+          await this.flipper.commands.storage.tarExtract(tempFile, extractPath)
+            .catch(error => this.rpcErrorHandler(error, 'storage.tarExtract'))
+            .finally(() => {
+              if (this.fakeExtractProgress !== null) {
+                clearInterval(this.fakeExtractProgress)
+                this.fakeExtractProgress = null
+              }
+              took = performance.now() - start
+              this.$emit('log', {
+                level: 'debug',
+                message: `Packs: storage.tarExtract: ${tempFile} to ${extractPath} took ${Math.round(took)}ms`
+              })
+            })
+          setProgress(1)
+
+          this.installStatus = 'Cleanup'
+          await this.flipper.commands.storage.remove(tempFile, false)
+            .catch(error => this.rpcErrorHandler(error, 'storage.remove'))
+            .finally(() => {
+              this.$emit('log', {
+                level: 'debug',
+                message: 'Packs: storage.remove: ' + tempFile
+              })
+            })
+        } finally {
+          this.installing.shift()
+          this.installStatus = null
+          this.progress = 0
         }
-
-        const extractPath = '/ext/asset_packs'
-        const tempPath = '/ext/.tmp/mntm'
-        const tempFile = `${tempPath}/${pack.id}.tar.gz`
-        await mkdirParents(extractPath)
-        await mkdirParents(tempPath)
-
-        this.installStatus = 'Copying'
-        step++
-        const unbind = this.flipper.emitter.on('storageWriteRequest/progress', e => {
-          setProgress(e.progress / e.total)
-        })
-        let start = performance.now()
-        let took = 0
-        await this.flipper.commands.storage.write(tempFile, packTarGz)
-          .catch(error => this.rpcErrorHandler(error, 'storage.write'))
-          .finally(() => {
-            took = performance.now() - start
-            this.$emit('log', {
-              level: 'debug',
-              message: `Packs: storage.write: ${tempFile} took ${Math.round(took)}ms`
-            })
-          })
-        unbind()
-
-        this.installStatus = 'Extracting'
-        step++
-        start = performance.now()
-        // Lord forgive me for I have sinned
-        const expectedExtractTime = took * 10 // Depends on compression ratio and sd speed, 10x is generous
-        const fakeExtractProgress = setInterval(() => {
-          setProgress((performance.now() - start) / expectedExtractTime)
-        }, 250)
-        await this.flipper.commands.storage.tarExtract(tempFile, extractPath)
-          .catch(error => this.rpcErrorHandler(error, 'storage.tarExtract'))
-          .finally(() => {
-            clearInterval(fakeExtractProgress)
-            took = performance.now() - start
-            this.$emit('log', {
-              level: 'debug',
-              message: `Packs: storage.tarExtract: ${tempFile} to ${extractPath} took ${Math.round(took)}ms`
-            })
-          })
-        setProgress(1)
-
-        this.installStatus = 'Cleanup'
-        await this.flipper.commands.storage.remove(tempFile, false)
-          .catch(error => this.rpcErrorHandler(error, 'storage.remove'))
-          .finally(() => {
-            this.$emit('log', {
-              level: 'debug',
-              message: 'Packs: storage.remove: ' + tempFile
-            })
-          })
-      } finally {
-        this.installing = null
-        this.installStatus = null
-        this.progress = 0
       }
     },
 
@@ -388,6 +405,10 @@ export default defineComponent({
       navigator.serial.addEventListener('disconnect', e => {
         this.flags.rpcActive = false
         this.flags.rpcToggling = false
+        if (this.fakeExtractProgress !== null) {
+          clearInterval(this.fakeExtractProgress)
+          this.fakeExtractProgress = null
+        }
         this.$emit('setRpcStatus', false)
       })
     }
