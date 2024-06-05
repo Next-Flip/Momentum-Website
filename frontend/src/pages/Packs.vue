@@ -50,7 +50,34 @@
               style="border: none; padding: 0; margin: 0; width: 50px; height: 50px;"
               flat
             />
-            <!-- TODO: Add icon indicators for pack content -->
+          </div>
+          <div class="q-mt-sm q-mx-md">
+            <q-icon v-if="pack.stats.packs > 1" size="1.5em" left name="category">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                Contains {{ pack.stats.packs }} Asset Packs
+              </q-tooltip>
+            </q-icon>
+            <q-icon v-if="pack.stats.anims > 0" size="1.5em" left name="ondemand_video">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                {{ pack.stats.anims }} Animation{{ pack.stats.anims > 1 ? "s" : "" }}
+              </q-tooltip>
+            </q-icon>
+            <q-icon v-if="pack.stats.passport.length > 0" size="1.5em" left name="portrait">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                {{ !pack.stats.passport.includes("Background") ? "" : "Passport Background" + (pack.stats.passport.length > 1 ? ` and ${pack.stats.passport.slice(1).join(", ")} Mood${pack.stats.passport.length > 2 ? "s" : ""}` : "") }}
+                {{ pack.stats.passport.includes("Background") ? "" : `${pack.stats.passport.join(", ")} Passport Mood${pack.stats.passport.length > 1 ? "s" : ""}` }}
+              </q-tooltip>
+            </q-icon>
+            <q-icon v-if="pack.stats.icons > 0" size="1.5em" left name="wallpaper">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                {{ pack.stats.icons }} Icon{{ pack.stats.icons > 1 ? "s" : "" }}
+              </q-tooltip>
+            </q-icon>
+            <q-icon v-if="pack.stats.fonts.length > 0" size="1.5em" left name="text_fields">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                {{ pack.stats.fonts.join(", ") }} Font{{ pack.stats.fonts.length > 1 ? "s" : "" }}
+              </q-tooltip>
+            </q-icon>
           </div>
           <div
             v-if="pack.description"
