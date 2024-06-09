@@ -355,7 +355,7 @@ export default defineComponent({
     this.fwOptions[0].version = this.channels.release.version
     this.fwOptions[1].version = this.channels.dev.version
 
-    const overrideChannel = (new URLSearchParams(location.search)).get('channel')
+    const overrideChannel = (new URLSearchParams(window.top.location.search)).get('channel')
     const override = this.fwOptions.find(e => e.value === overrideChannel)
     const selectedBefore = this.fwOptions.find(e => e.value === localStorage.getItem('selectedFwChannel'))
     if (override) {
