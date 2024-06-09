@@ -91,15 +91,21 @@
               style="flex: 1;"
               flat
             >Download</q-btn>
-            <!-- TODO: Maybe support queueing to install after -->
             <q-btn
-              v-if="!installing.includes(pack)"
-              :disable="!serialSupported || rpcToggling"
+              v-if="flags.ableToExtract === false"
+              @click="updateFw()"
+              class="main-btn"
+              style="flex: 1;"
+              flat
+            >Update FW</q-btn>
+            <q-btn
+              v-else-if="!installing.includes(pack)"
+              :disable="!serialSupported || rpcToggling || (connected && flags.ableToExtract === null)"
               @click="install(pack)"
               class="main-btn"
               style="flex: 1;"
               flat
-            >{{ !serialSupported ? 'Unsupported' : rpcToggling ? 'Connecting' : !connected ? 'Connect' : 'Install' }}</q-btn>
+            >{{ !serialSupported ? 'Unsupported' : rpcToggling ? 'Connecting' : !connected ? 'Connect' : flags.ableToExtract === null ? 'Loading' : 'Install' }}</q-btn>
             <q-btn
               v-else-if="installing.indexOf(pack) === 0"
               class="main-btn"
@@ -126,6 +132,7 @@
 import { fetchPacks } from '../util/util'
 import { defineComponent, ref } from 'vue'
 import asyncSleep from 'simple-async-sleep'
+import semver from 'semver'
 
 export default defineComponent({
   name: 'PagePacks',
@@ -146,7 +153,8 @@ export default defineComponent({
       flags: ref({
         restarting: false,
         rpcActive: false,
-        rpcToggling: false
+        rpcToggling: false,
+        ableToExtract: null
       }),
       progress: ref(0),
       installStatus: ref(null),
@@ -158,12 +166,17 @@ export default defineComponent({
   watch: {
     async info (newInfo, oldInfo) {
       if (newInfo !== null && newInfo.storage_databases_present && this.connected) {
+        this.flags.ableToExtract = !semver.lt((this.info.protobuf_version_major + '.' + this.info.protobuf_version_minor) + '.0', '0.23.0')
         await this.start()
       }
     }
   },
 
   methods: {
+    async updateFw () {
+      window.top.location.href = '/update?channel=dev'
+    },
+
     async install (pack) {
       if (!this.serialSupported) return
       if (!this.connected || this.info == null || !this.rpcActive) {
@@ -413,6 +426,7 @@ export default defineComponent({
           clearInterval(this.fakeExtractProgress)
           this.fakeExtractProgress = null
         }
+        this.flags.ableToExtract = null
         this.flags.rpcActive = false
         this.flags.rpcToggling = false
         this.$emit('setRpcStatus', false)
