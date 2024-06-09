@@ -36,7 +36,7 @@
             />
           </q-carousel>
 
-          <div class="q-mt-xs q-ml-md q-mr-sm flex flex-col items-center justify-between">
+          <div class="q-mt-xs q-ml-md q-mr-sm flex flex-col items-center justify-between" style="flex-wrap: nowrap;">
             <div class="text-left text-bold">
               <div class="text-h5">{{ pack.name }}</div>
               <div class="text-h7">by {{ pack.author }}</div>
