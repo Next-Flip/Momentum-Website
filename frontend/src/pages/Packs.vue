@@ -9,41 +9,117 @@
         ></q-spinner>
         <p>Loading Asset Packs...</p>
       </template>
+      <h5 v-else-if="packs.length < 1">Nothing to see here 🤔</h5>
       <q-list v-else class="packs-grid">
         <q-card
           v-for="pack in packs"
-          :key="pack.name"
+          :key="pack.id"
           v-bind="pack"
-          class="my-card"
+          class="flex justify-between"
+          style="flex-direction: column;"
           dark
         >
-          <img :src="pack.image">
+          <q-carousel
+            animated
+            v-model="slides[pack.id]"
+            :arrows="pack.preview_urls.length > 1"
+            :navigation="pack.preview_urls.length > 1"
+            transition-prev="slide-right"
+            transition-next="slide-left"
+            infinite
+          >
+            <q-carousel-slide
+              v-for="(preview_url, i) in pack.preview_urls"
+              :key="i"
+              :name="i + 1"
+              :img-src="preview_url"
+            />
+          </q-carousel>
 
-          <div class="text-h5 text-bold text-center">{{ pack.name }}</div>
-          <div class="text-h7 text-center">By {{ pack.author }}</div>
+          <div class="q-mt-xs q-ml-md q-mr-sm flex flex-col items-center justify-between" style="flex-wrap: nowrap;">
+            <div class="text-left text-bold">
+              <div class="text-h5">{{ pack.name }}</div>
+              <div class="text-h7">by {{ pack.author }}</div>
+            </div>
+            <q-btn
+              v-if="pack.source_url"
+              :href="pack.source_url"
+              target="_blank"
+              icon="open_in_new"
+              class="main-btn"
+              style="border: none; padding: 0; margin: 0; width: 50px; height: 50px;"
+              flat
+            />
+          </div>
+          <div class="q-mt-sm q-mx-md">
+            <q-icon v-if="pack.stats.packs > 1" size="1.5em" left name="category">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                Contains {{ pack.stats.packs }} Asset Packs
+              </q-tooltip>
+            </q-icon>
+            <q-icon v-if="pack.stats.anims > 0" size="1.5em" left name="ondemand_video">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                {{ pack.stats.anims }} Animation{{ pack.stats.anims > 1 ? "s" : "" }}
+              </q-tooltip>
+            </q-icon>
+            <q-icon v-if="pack.stats.passport.length > 0" size="1.5em" left name="portrait">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                {{ !pack.stats.passport.includes("Background") ? "" : "Passport Background" + (pack.stats.passport.length > 1 ? ` and ${pack.stats.passport.slice(1).join(", ")} Mood${pack.stats.passport.length > 2 ? "s" : ""}` : "") }}
+                {{ pack.stats.passport.includes("Background") ? "" : `${pack.stats.passport.join(", ")} Passport Mood${pack.stats.passport.length > 1 ? "s" : ""}` }}
+              </q-tooltip>
+            </q-icon>
+            <q-icon v-if="pack.stats.icons > 0" size="1.5em" left name="wallpaper">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                {{ pack.stats.icons }} Icon{{ pack.stats.icons > 1 ? "s" : "" }}
+              </q-tooltip>
+            </q-icon>
+            <q-icon v-if="pack.stats.fonts.length > 0" size="1.5em" left name="text_fields">
+              <q-tooltip style="font-size: 1.2em; padding: 0.1em 0.3em;">
+                {{ pack.stats.fonts.join(", ") }} Font{{ pack.stats.fonts.length > 1 ? "s" : "" }}
+              </q-tooltip>
+            </q-icon>
+          </div>
+          <div
+            v-if="pack.description"
+            class="text-h7 q-mt-sm q-mx-md"
+          >{{ pack.description }}</div>
 
           <q-card-actions :align="'stretch'">
             <q-btn
-              :href="pack.download"
+              :href="pack.url_zip"
               class="main-btn"
               style="flex: 1;"
               flat
             >Download</q-btn>
             <q-btn
-              v-if="pack.name !== installing"
-              :disable="!serialSupported || installing !== null || rpcToggling"
+              v-if="flags.ableToExtract === false"
+              @click="updateFw()"
+              class="main-btn"
+              style="flex: 1;"
+              flat
+            >Update FW</q-btn>
+            <q-btn
+              v-else-if="!installing.includes(pack)"
+              :disable="!serialSupported || rpcToggling || (connected && flags.ableToExtract === null)"
               @click="install(pack)"
               class="main-btn"
               style="flex: 1;"
               flat
-            >{{ !serialSupported ? 'Unsupported' : rpcToggling ? 'Connecting' : !connected ? 'Connect' : 'Install' }}</q-btn>
+            >{{ !serialSupported ? 'Unsupported' : rpcToggling ? 'Connecting' : !connected ? 'Connect' : flags.ableToExtract === null ? 'Loading' : 'Install' }}</q-btn>
             <q-btn
-              v-else
+              v-else-if="installing.indexOf(pack) === 0"
               class="main-btn"
               :style="`flex: 1; background-image: linear-gradient(to right, #a883e9 ${progress * 100}%, transparent ${progress * 100}%);`"
               disable
               flat
-            >Installing</q-btn>
+            >{{ installStatus }}</q-btn>
+            <q-btn
+              v-else
+              class="main-btn"
+              style="flex: 1;"
+              disable
+              flat
+            >Queued</q-btn>
           </q-card-actions>
 
         </q-card>
@@ -53,9 +129,10 @@
 </template>
 
 <script>
-import { fetchPacks, fetchPack } from '../util/util'
+import { fetchPacks } from '../util/util'
 import { defineComponent, ref } from 'vue'
 import asyncSleep from 'simple-async-sleep'
+import semver from 'semver'
 
 export default defineComponent({
   name: 'PagePacks',
@@ -72,102 +149,193 @@ export default defineComponent({
   setup () {
     return {
       packs: ref(null),
+      slides: ref({}),
       flags: ref({
         restarting: false,
         rpcActive: false,
-        rpcToggling: false
+        rpcToggling: false,
+        ableToExtract: null
       }),
       progress: ref(0),
-      installing: ref(null)
+      installStatus: ref(null),
+      installing: ref([]),
+      fakeExtractProgress: ref(null)
     }
   },
 
   watch: {
     async info (newInfo, oldInfo) {
       if (newInfo !== null && newInfo.storage_databases_present && this.connected) {
+        this.flags.ableToExtract = !semver.lt((this.info.protobuf_version_major + '.' + this.info.protobuf_version_minor) + '.0', '0.23.0')
         await this.start()
       }
     }
   },
 
   methods: {
+    async updateFw () {
+      window.top.location.href = '/update?channel=dev'
+    },
+
     async install (pack) {
       if (!this.serialSupported) return
       if (!this.connected || this.info == null || !this.rpcActive) {
         if (!this.rpcToggling) this.$emit('selectPort')
         return
       }
-      try {
-        this.installing = pack.name
-        this.progress = 0
-        const files = await fetchPack(pack.download)
-          .catch(error => {
-            this.$emit('showNotif', {
-              message: 'Failed to fetch pack: ' + error.toString(),
-              color: 'negative'
-            })
-            this.$emit('log', {
-              level: 'error',
-              message: 'Packs: Failed to fetch pack: ' + error.toString()
-            })
-            throw error
-          })
-          .finally(() => {
-            this.$emit('log', {
-              level: 'debug',
-              message: 'Packs: Downloaded pack from ' + pack.download
-            })
-          })
+      this.installing.push(pack)
+      if (this.installing.length > 1) {
+        return
+      }
+      while (this.installing.length > 0) {
+        try {
+          const stepCount = 3
+          let step = -1
+          const setProgress = (progress) => {
+            this.progress = (progress / stepCount) + (1 / stepCount * step)
+          }
+          this.progress = 0
 
-        const fileList = Object.entries(files).sort((a, b) => (a[0] > b[0]) ? +1 : -1)
-        let path = '/ext'
-        let mkdir = 'asset_packs/' + fileList[0][0]
-        if (mkdir.endsWith('/')) {
-          mkdir = mkdir.slice(0, -1)
-        }
-        for (const segment of mkdir.split('/')) {
-          path += '/' + segment
-          await this.flipper.commands.storage.mkdir(path)
-            .catch(error => this.rpcErrorHandler(error, 'storage.mkdir'))
+          this.installStatus = 'Loading'
+          step++
+          pack = this.installing[0]
+          const url = pack.url_targz
+          const packTarGz = await fetch(url)
+            .then(async response => {
+              if (response.status >= 400) {
+                throw new Error('Pack returned ' + response.status)
+              }
+              // Read in chunks
+              const totalLength = Number(response.headers.get('content-length'))
+              const reader = response.body.getReader()
+              let receivedLength = 0
+              const chunks = []
+              while (true) {
+                const { done, value } = await reader.read()
+                if (done) break
+                chunks.push(value)
+                receivedLength += value.length
+                // Update progress
+                setProgress(receivedLength / totalLength)
+              }
+              // Piece together the chunks into one array
+              const chunksAll = new Uint8Array(receivedLength)
+              let position = 0
+              for (const chunk of chunks) {
+                chunksAll.set(chunk, position)
+                position += chunk.length
+              }
+              return chunksAll
+            })
+            .catch(error => {
+              this.$emit('showNotif', {
+                message: 'Failed to fetch pack: ' + error.toString(),
+                color: 'negative'
+              })
+              this.$emit('log', {
+                level: 'error',
+                message: 'Packs: Failed to fetch pack: ' + error.toString()
+              })
+              throw error
+            })
             .finally(() => {
               this.$emit('log', {
                 level: 'debug',
-                message: 'Packs: storage.mkdir: ' + path
+                message: 'Packs: Downloaded pack from ' + url
               })
             })
-        }
 
-        let i = 0
-        for (const [name, file] of fileList) {
-          if (file.byteLength === 0) {
-            path = '/ext/asset_packs/' + name
-            if (name.endsWith('/')) {
+          const mkdirParents = async (path) => {
+            if (path.endsWith('/')) {
               path = path.slice(0, -1)
             }
-            await this.flipper.commands.storage.mkdir(path)
-              .catch(error => this.rpcErrorHandler(error, 'storage.mkdir'))
-              .finally(() => {
-                this.$emit('log', {
-                  level: 'debug',
-                  message: 'Packs: storage.mkdir: ' + path
+            let full = ''
+            for (const segment of path.split('/')) {
+              if (full !== '/') {
+                full += '/'
+              }
+              full += segment
+              if (full.length < '/ext/*'.length) {
+                continue // Cannot mkdir filesystems root, needs to be atleast fs root + 1 char
+              }
+              await this.flipper.commands.storage.mkdir(full)
+                .catch(error => this.rpcErrorHandler(error, 'storage.mkdir'))
+                .finally(() => {
+                  this.$emit('log', {
+                    level: 'debug',
+                    message: 'Packs: storage.mkdir: ' + full
+                  })
                 })
-              })
-          } else {
-            await this.flipper.commands.storage.write('/ext/asset_packs/' + name, file.buffer)
-              .catch(error => this.rpcErrorHandler(error, 'storage.write'))
-              .finally(() => {
-                this.$emit('log', {
-                  level: 'debug',
-                  message: 'Packs: storage.write: /ext/asset_packs/' + name
-                })
-              })
+            }
           }
-          i++
-          this.progress = i / fileList.length
+
+          const extractPath = '/ext/asset_packs'
+          const tempPath = '/ext/.tmp/mntm'
+          const tempFile = `${tempPath}/${pack.id}.tar.gz`
+          await mkdirParents(extractPath)
+          await mkdirParents(tempPath)
+
+          this.installStatus = 'Copying'
+          step++
+          const unbind = this.flipper.emitter.on('storageWriteRequest/progress', e => {
+            setProgress(e.progress / e.total)
+          })
+          let start = performance.now()
+          let took = 0
+          await this.flipper.commands.storage.write(tempFile, packTarGz)
+            .catch(error => {
+              this.rpcErrorHandler(error, 'storage.write')
+              throw error
+            })
+            .finally(() => {
+              took = performance.now() - start
+              this.$emit('log', {
+                level: 'debug',
+                message: `Packs: storage.write: ${tempFile} took ${Math.round(took)}ms`
+              })
+            })
+          unbind()
+
+          this.installStatus = 'Extracting'
+          step++
+          start = performance.now()
+          // Lord forgive me for I have sinned
+          const expectedExtractTime = took * 10 // Depends on compression ratio and sd speed, 10x is generous
+          this.fakeExtractProgress = setInterval(() => {
+            setProgress((performance.now() - start) / expectedExtractTime)
+          }, 250)
+          await this.flipper.commands.storage.tarExtract(tempFile, extractPath)
+            .catch(error => {
+              this.rpcErrorHandler(error, 'storage.tarExtract')
+              throw error
+            })
+            .finally(() => {
+              if (this.fakeExtractProgress !== null) {
+                clearInterval(this.fakeExtractProgress)
+                this.fakeExtractProgress = null
+              }
+              took = performance.now() - start
+              this.$emit('log', {
+                level: 'debug',
+                message: `Packs: storage.tarExtract: ${tempFile} to ${extractPath} took ${Math.round(took)}ms`
+              })
+            })
+          setProgress(1)
+
+          this.installStatus = 'Cleanup'
+          await this.flipper.commands.storage.remove(tempFile, false)
+            .catch(error => this.rpcErrorHandler(error, 'storage.remove'))
+            .finally(() => {
+              this.$emit('log', {
+                level: 'debug',
+                message: 'Packs: storage.remove: ' + tempFile
+              })
+            })
+        } finally {
+          this.installing.shift()
+          this.installStatus = null
+          this.progress = 0
         }
-      } finally {
-        this.installing = null
-        this.progress = 0
       }
     },
 
@@ -254,6 +422,11 @@ export default defineComponent({
         await this.startRpc()
       }
       navigator.serial.addEventListener('disconnect', e => {
+        if (this.fakeExtractProgress !== null) {
+          clearInterval(this.fakeExtractProgress)
+          this.fakeExtractProgress = null
+        }
+        this.flags.ableToExtract = null
         this.flags.rpcActive = false
         this.flags.rpcToggling = false
         this.$emit('setRpcStatus', false)
@@ -262,7 +435,7 @@ export default defineComponent({
   },
 
   async mounted () {
-    this.packs = await fetchPacks()
+    const packs = await fetchPacks()
       .catch(error => {
         this.$emit('showNotif', {
           message: 'Unable to load asset packs from the server. Reload the page and try again.',
@@ -275,6 +448,10 @@ export default defineComponent({
         })
         throw error
       })
+    for (const pack of packs) {
+      this.slides[pack.id] = 1
+    }
+    this.packs = packs
     if (this.connected && this.info !== null && this.info.storage_databases_present) {
       await this.start()
     }

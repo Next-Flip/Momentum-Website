@@ -170,6 +170,23 @@ function stat (path) {
   })
 }
 
+function tarExtract (tarPath, outPath) {
+  return new Promise((resolve, reject) => {
+    enqueue({
+      requestType: 'storageTarExtractRequest',
+      args: { tarPath, outPath }
+    })
+    const unbind = emitter.on('response', res => {
+      if (res && res.error) {
+        reject(res.error, res)
+      } else {
+        resolve(res)
+      }
+      unbind()
+    })
+  })
+}
+
 export {
   info,
   list,
@@ -178,5 +195,6 @@ export {
   mkdir,
   remove,
   rename,
-  stat
+  stat,
+  tarExtract
 }

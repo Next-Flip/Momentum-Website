@@ -1,6 +1,5 @@
 import { untar } from '../untar/untar.js'
 import pako from 'pako'
-import { unzipSync } from 'fflate'
 
 class Operation {
   constructor () {
@@ -26,47 +25,28 @@ class Operation {
 }
 
 async function fetchPacks () {
-  return []
-  // const response = await fetch(`${cloud}${webdav}`, {
-  //   method: 'PROPFIND',
-  //   headers: {
-  //     Authorization: `Basic ${btoa(packsShare + ':')}`
-  //   }
-  // })
-  // if (response.status >= 400) {
-  //   throw new Error('Failed to fetch asset packs (' + response.status + ')')
-  // }
-  // const data = await response.text()
+  const response = await fetch('https://up.momentum-fw.dev/asset-packs/directory.json')
+  if (response.status >= 400) {
+    throw new Error('Failed to fetch asset packs (' + response.status + ')')
+  }
+  const data = await response.json()
 
-  // const res = (new DOMParser()).parseFromString(data, 'text/xml')
-  // const packs = []
-  // for (const file of res.getElementsByTagName('d:response')) {
-  //   const path = file.getElementsByTagName('d:href')[0].textContent.trim()
-  //   if (!(path.startsWith(webdav) && path.endsWith('.zip'))) continue
-  //   const [name, author] = decodeURI(path.slice(webdav.length, -'.zip'.length)).split('.')
-  //   const url = `${cloud}/s/${packsShare}/download?path=/&files=${name}.${author}`
-  //   packs.push({
-  //     name: name,
-  //     author: author,
-  //     description: '',
-  //     image: url + '.png',
-  //     download: url + '.zip'
-  //   })
-  // }
-  // return packs
-}
-
-async function fetchPack (url) {
-  const buffer = await fetch(url)
-    .then(async response => {
-      if (response.status >= 400) {
-        throw new Error('Failed to fetch resources (' + response.status + ')')
+  const packs = data.packs.map((pack) => {
+    for (const file of pack.files) {
+      if (file.type === 'pack_targz') {
+        pack.url_targz = file.url
+      } else if (file.type === 'pack_zip') {
+        pack.url_zip = file.url
       }
-      const buffer = await response.arrayBuffer()
-      return unzipSync(new Uint8Array(buffer))
-    })
+    }
+    if (pack.url_targz && pack.url_zip) {
+      return pack
+    } else {
+      return null
+    }
+  }).filter(pack => pack)
 
-  return buffer
+  return packs
 }
 
 function fetchChannels (target) {
@@ -109,6 +89,7 @@ function fetchChannels (target) {
         for (let i = 5; i > 0; i--) {
           changelog = changelog.replaceAll(RegExp(`^${'#'.repeat(i)} (.*?)(\r?\n)+`, 'gm'), `<h${i}>$1</h${i}>`)
         }
+        // TODO: use q-markdown
         // eslint-disable-next-line
         changelog = changelog.replaceAll(/\[([^\]]+)\]\(([^\)]+)\)/g, '<a target="_blank" href="$2">$1</a>')
         changelog = changelog.replaceAll(/\*\*(.*?)\*\*/g, '<b>$1</b>')
@@ -173,7 +154,6 @@ function bytesToSize (bytes) {
 export {
   Operation,
   fetchPacks,
-  fetchPack,
   fetchChannels,
   fetchFirmware,
   fetchRegions,
