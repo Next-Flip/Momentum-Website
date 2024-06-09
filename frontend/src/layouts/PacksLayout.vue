@@ -208,6 +208,7 @@ export default defineComponent({
         level: 'info',
         message: 'Main: Fetched device info'
       })
+      this.info = { ...this.info }
     },
 
     findKnownDevices () {

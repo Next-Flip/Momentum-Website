@@ -160,12 +160,6 @@ export default defineComponent({
       if (newInfo !== null && newInfo.storage_databases_present && this.connected) {
         await this.start()
       }
-    },
-    async connected (newConnected, oldConnected) {
-      if (newConnected === false && this.fakeExtractProgress !== null) {
-        clearInterval(this.fakeExtractProgress)
-        this.fakeExtractProgress = null
-      }
     }
   },
 
@@ -415,6 +409,10 @@ export default defineComponent({
         await this.startRpc()
       }
       navigator.serial.addEventListener('disconnect', e => {
+        if (this.fakeExtractProgress !== null) {
+          clearInterval(this.fakeExtractProgress)
+          this.fakeExtractProgress = null
+        }
         this.flags.rpcActive = false
         this.flags.rpcToggling = false
         this.$emit('setRpcStatus', false)
