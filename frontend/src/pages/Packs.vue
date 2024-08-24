@@ -174,7 +174,7 @@ export default defineComponent({
 
   methods: {
     async updateFw () {
-      window.top.location.href = '/update?channel=dev'
+      window.top.location.href = '/update'
     },
 
     async install (pack) {
