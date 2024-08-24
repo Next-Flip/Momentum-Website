@@ -199,8 +199,8 @@ export default defineComponent({
           this.installStatus = 'Loading'
           step++
           pack = this.installing[0]
-          const url = pack.url_targz
-          const packTarGz = await fetch(url)
+          const url = pack.url_tar
+          const packTar = await fetch(url)
             .then(async response => {
               if (response.status >= 400) {
                 throw new Error('Pack returned ' + response.status)
@@ -282,7 +282,7 @@ export default defineComponent({
           })
           let start = performance.now()
           let took = 0
-          await this.flipper.commands.storage.write(tempFile, packTarGz)
+          await this.flipper.commands.storage.write(tempFile, packTar)
             .catch(error => {
               this.rpcErrorHandler(error, 'storage.write')
               throw error
